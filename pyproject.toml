@@ -1,0 +1,59 @@
+[build-system]
+requires = [
+	"setuptools>=61.0",
+	"setuptools_scm[toml]>=3.4.3",
+	"wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "release-branch-semver"
+local_scheme = "no-local-version"
+
+[project]
+name = "catalog-plotter"
+dynamic = ["version"]
+authors = [
+	{ name = "Daniel Williams", email = "daniel.williams@ligo.org" },
+	]
+description = "Utilities for plotting gravitational wave event catalogues."
+readme = "README.md"
+license = "MIT" 
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"Operating System :: OS Independent",
+        'Environment :: Console',
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Astronomy',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Natural Language :: English',
+]
+requires-python = ">=3.9"
+dependencies = [
+	     "click",
+	     "matplotlib",
+]
+
+[project.optional-dependencies]
+docs = [
+	"sphinx",
+	"kentigern >= 0.3.0",
+        "numpydoc",
+	"sphinx-click",
+	"sphinx-multiversion"
+]
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[project.scripts]
+catplot = "catplot.cli:catplot"
+
+[project.urls]
+"Source code" = "https://git.ligo.org/asimov/asimov"
+
+# [tool.setuptools]
+# include-package-data = true
+# packages = [
+# 	"python",
+# ]
