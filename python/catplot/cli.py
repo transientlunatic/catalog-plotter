@@ -49,13 +49,21 @@ def population(catfile):
     f.savefig("pop.pdf")
 
 @click.option("--catfile")
+@click.option("--output", "-o", default=None)
 @catplot.command()
-def macros(catfile):
+def macros(catfile, output):
     click.echo("Creating LaTeX macros for the catalogue.")
     cat_data = io.read_catfile(catfile)
-    latex.properties_latex_macros(cat_data)
+    macros, table = latex.properties_latex_macros(cat_data)
 
-    click.echo(cat_data)
+    if output is None:
+        output = os.getcwd()
+    
+    with open(os.path.join(output, "table.tex"), "w") as table_file:
+        table_file.write(table)
+
+    with open(os.path.join(output, "macros.tex"), "w") as macro_file:
+        macro_file.write(macros)
 
 @catplot.command()
 def json(catfile):
