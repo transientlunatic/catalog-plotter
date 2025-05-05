@@ -8,6 +8,7 @@ from . import plotting
 from . import binning
 from . import io
 from .colour import colours
+from . import latex
 
 import pickle
 from pesummary.io import read
@@ -23,7 +24,6 @@ def catplot(ctx):
     """
 
     pass
-
 
 @click.argument("project", required=True)
 @catplot.command()
@@ -45,43 +45,21 @@ def family(project):
 def population(catfile):
     click.echo("Plotting a population plane plot")
 
-    properties = ("mass_1_source", "mass_2_source")
-    
-    events = io.read_catfile(catfile)
-    
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-
-    property_map = {
-        "mass_1_source": "$m_1$",
-        "mass_2_source": "$m_2$"
-        }
-    
-    
-    bins = [np.linspace(0.1, 10, 200), np.linspace(0.1, 3, 200)]
-
-    files = [event['metafile'] for event in events]
-    
-    data = binning.combine_analyses(files, properties,
-                                    bins)
-
-    f, ax = plt.subplots(1,1, figsize=(5*1.6, 3), dpi=300)
-    ax.imshow(data.T, origin="lower", cmap="Greys", extent=[bins[0][0], bins[0][-1],
-                                                            bins[1][0], bins[1][-1]])
-    i = 0
-    for event in events:
-        if event.get('highlight'):
-            colour = colours[i]
-            i+= 1
-        else:
-            colour = 'k'
-        cs, labels = binning.contours(event['metafile'], event['name'], ("mass_1_source", "mass_2_source"), 0.1, bins, colour=colour)
-        #ax.clabel(cs, cs.levels, fmt=lambda x: f"{event['name']}", fontsize=5)
-        
-    ax.set_xlabel(property_map[properties[0]])
-    ax.set_ylabel(property_map[properties[1]])
+    f = plotting.plane_plot(catfile)
     f.savefig("pop.pdf")
+
+@catplot.command()
+def macros(catfile):
+    click.echo("Creating LaTeX macros for the catalogue.")
+    cat_data = io.read_catfile(catfile)
+    latex.properties_latex_macros(cat_data)
+
+    click.echo(cat_data)
+
+@catplot.command()
+def json(catfile):
+    click.echo("Creating json summary for the catalogue.")
+    
     
 if __name__ == "__main__":
     catplot()
