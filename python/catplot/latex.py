@@ -27,7 +27,7 @@ def event_value_pair(event, value):
     return macro.format(event, value)
 
 
-def properties_latex_macros(event_data, analyses):
+def properties_latex_macros(event_data):
 
     properties = ['total_mass_source',
                   'chirp_mass_source',
@@ -64,7 +64,10 @@ def properties_latex_macros(event_data, analyses):
             print(event)
             print(event_data[event][analyses]["metafile"])
 
-            analyses = event_data[event][analyses]["name"]
+            if name in event_data[event][analyses]:
+                analyses = event_data[event][analyses]["name"]
+            else:
+                analyses = None
             datafile = event_data[event][analyses]["metafile"]
             
             with h5.File(datafile) as metafile:
