@@ -48,6 +48,7 @@ def population(catfile):
     f = plotting.plane_plot(catfile)
     f.savefig("pop.pdf")
 
+@click.option("--catfile")
 @catplot.command()
 def macros(catfile):
     click.echo("Creating LaTeX macros for the catalogue.")
