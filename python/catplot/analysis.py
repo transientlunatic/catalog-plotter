@@ -13,8 +13,6 @@ from copy import copy
 from pesummary.utils.credible_interval import hpd_two_sided_credible_interval
 import os
 
-from .latex import sanitise_macro_name, event_value_pair
-
 def calculate_divergences(datafiles, analyses=None):
     """
     Calculate the divergences between all of the analyses in a given set of datafiles and analyses.
@@ -70,7 +68,7 @@ def calculate_property(posterior, percentile=90):
     return interval[0]-median, median, interval[1]-median
     
 
-
+\
 
     
 
