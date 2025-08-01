@@ -11,7 +11,7 @@ version_scheme = "release-branch-semver"
 local_scheme = "no-local-version"
 
 [project]
-name = "catalog-plotter"
+name = "gw-catalog-plotter"
 dynamic = ["version"]
 authors = [
 	{ name = "Daniel Williams", email = "daniel.williams@ligo.org" },
@@ -50,10 +50,4 @@ where = ["python"]
 catplot = "catplot.cli:catplot"
 
 [project.urls]
-"Source code" = "https://git.ligo.org/asimov/asimov"
-
-# [tool.setuptools]
-# include-package-data = true
-# packages = [
-# 	"python",
-# ]
+"Source code" = "https://github.com/transientlunatic/catalog-plotter"
