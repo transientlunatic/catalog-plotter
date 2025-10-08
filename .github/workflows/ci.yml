@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  pages: write
+  id-token: write
+
 jobs:
   lint:
     name: Lint (ruff)
@@ -106,6 +112,7 @@ jobs:
           python -m pip install sphinx || true
 
       - name: Build docs (if present)
+        id: build-docs
         run: |
           if [ -f docs/conf.py ] || [ -d docs ]; then
             echo "Building Sphinx docs"
@@ -115,3 +122,7 @@ jobs:
           else
             echo "No docs/ directory found — skipping docs build"
           fi
+
+      - name: Deploy docs to GitHub Pages
+        if: ${{ steps.build-docs.outcome == 'success' }} && (github.ref == 'refs/heads/main')
+        uses: actions/deploy-pages@v1
