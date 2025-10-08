@@ -1,0 +1,50 @@
+
+plots:
+  family:
+    ranges:
+      chirp_mass_source: [0.5, 4]
+      luminosity_distance: [100, 1000]
+    xticks: 
+      chirp_mass_source: [0.5, 1.0, 2, 3, 4]
+events:
+  - name: GW190531_033648
+    metafile: /data/www.astro/daniel/asimov/o3-bns/S190531n/bilby-roq-cosmo-2/pesummary/samples/posterior_samples.h5
+    highlight: true
+    color: "green"
+
+  - name: GW191118_212859
+    metafile: /data/www.astro/daniel/asimov/o3-bns/S191118ae/bilby-mb-imrpnrtv2-V-2/pesummary/samples/posterior_samples.h5
+    highlight: true
+    color: "blue"
+
+  - name: GW200201_203549
+    metafile: /data/www.astro/daniel/asimov/o3-bns/S200201bh/bilby-mb-imrpnrtv2/pesummary/samples/posterior_samples.h5
+    highlight: true
+    color: "red"
+
+  - name: GW200311_103122
+    metafile: /data/www.astro/daniel/asimov/o3-bns/S200311ba/bilby-roq-2/pesummary/samples/posterior_samples.h5
+    highlight: true
+    color: "orange"
+
+  - name: GW170817
+    metafile: /data/wiay/daniel/releases/special/GW170817/gw170817-to-pessummary/webpages/samples/IGWN-GWTC2p1-v2-GW170817_PEDataRelease_cosmo.h5
+
+  - name: GW191219
+    metafile: /data/wiay/daniel/releases/gwtc3/IGWN-GWTC3p0-v2-GW191219_163120_PEDataRelease_mixed_cosmo.h5
+
+  - name: GW190425
+    metafile: /data/wiay/daniel/releases/gwtc2d1/IGWN-GWTC2p1-v2-GW190425_081805_PEDataRelease_mixed_cosmo.h5
+
+  - name: GW190426
+    metafile: /data/wiay/daniel/releases/gwtc2d1/IGWN-GWTC2p1-v2-GW190426_190642_PEDataRelease_mixed_cosmo.h5
+
+  - name: GW200105
+    metafile: /data/wiay/daniel/releases/gwtc3/IGWN-GWTC3p0-v2-GW200105_162426_PEDataRelease_mixed_cosmo.h5
+
+  - name: GW200115
+    metafile: /data/wiay/daniel/releases/gwtc3/IGWN-GWTC3p0-v2-GW200115_042309_PEDataRelease_mixed_cosmo.h5
+
+  - name: GW230529
+    metafile: /data/wiay/daniel/releases/special/GW230529/posterior_samples.h5
+

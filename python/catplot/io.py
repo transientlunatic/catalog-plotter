@@ -11,3 +11,10 @@ def read_catfile(filename):
         data = yaml.safe_load(datafile)
 
     return data
+
+
+def write_json(catalogue, filename):
+    """
+    Write a catalogue to a json representation
+    """
+    raise NotImplementedError

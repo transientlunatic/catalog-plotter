@@ -9,6 +9,7 @@ from . import binning
 from . import io
 from .colour import colours
 from . import latex
+from . import data
 
 import pickle
 from pesummary.io import read
@@ -25,19 +26,29 @@ def catplot(ctx):
 
     pass
 
-@click.argument("project", required=True)
+@click.option("--project", default=None)
+@click.option("--catfile", default=None)
 @catplot.command()
-def family(project):
+def family(project, catfile):
     """
     Create a single-page plot of all of the events in the catalogue
     with each analysis.
     """
     click.echo("Creating a family photo plot for the catalogue.")
-    with open(os.path.join(project, ".asimov", "ledger.yml")) as datafile:
-        event_data = yaml.safe_load(datafile)
-        event_data = event_data['events']
-    click.echo(f"Found {len(event_data)} events in the asimov project.")
-    figure = plotting.comparison_plots_metafile(project, event_data)
+
+    if project is not None:
+        with open(os.path.join(project, ".asimov", "ledger.yml")) as datafile:
+            event_data = yaml.safe_load(datafile)
+            event_data = event_data['events']
+        click.echo(f"Found {len(event_data)} events in the asimov project.")
+        cat_data = None
+
+    elif catfile is not None:
+        cat_data = io.read_catfile(catfile)
+        project = None
+        event_data = None
+        
+    figure = plotting.comparison_plots_metafile(project=project, event_data=event_data, catfile=cat_data)
     figure.savefig("family.png")
 
 @click.option("--catfile")
@@ -65,10 +76,16 @@ def macros(catfile, output):
     with open(os.path.join(output, "macros.tex"), "w") as macro_file:
         macro_file.write(macros)
 
+@click.option("--catfile")
+@click.option("--output", "-o", default=None)        
 @catplot.command()
-def json(catfile):
+def json(catfile, output):
     click.echo("Creating json summary for the catalogue.")
-    
+    if catfile:
+        cat_data = io.read_catfile(catfile)
+
+    summary = data.CatalogSummary(cat_data)
+    summary.save_json(output)
     
 if __name__ == "__main__":
     catplot()

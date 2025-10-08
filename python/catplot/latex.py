@@ -69,7 +69,7 @@ def properties_latex_macros(event_data):
             print(event["metafile"])
 
             if "analysis" in event:
-                analyses = event["analysis"]
+                analyses = [event["analysis"]]
             else:
                 analyses = None
             datafile = event["metafile"]
