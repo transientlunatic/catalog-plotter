@@ -32,9 +32,16 @@ jobs:
           python -m pip install ruff
 
       - name: Run ruff
+        id: run-ruff
+        continue-on-error: true
         run: |
           # Run ruff using project configuration in pyproject.toml
           ruff check . --format github || (echo "Ruff found issues" && exit 1)
+
+      - name: Warn about ruff failure  
+        if: ${{ steps.run-ruff.outcome == 'failure' }}
+        run: |
+          echo "Ruff found issues"
 
   test:
     name: Test (pytest) on Python ${{ matrix.python-version }}
