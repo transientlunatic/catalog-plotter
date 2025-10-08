@@ -32,6 +32,11 @@ requires-python = ">=3.9"
 dependencies = [
 	     "click",
 	     "matplotlib",
+		 "pyyaml",
+		 "h5py",
+		 "pyfonts",
+		 "scipy",
+		 "pesummary",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +47,13 @@ docs = [
 	"sphinx-click",
 	"sphinx-multiversion"
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+exclude = ["build", "dist", ".venv", "environment", "docs/_build", "__pycache__"]
+extend-ignore = ["E203", "W503"]
+extend-select = ["B", "C", "E", "F", "I", "UP"]
 
 [tool.setuptools.packages.find]
 where = ["python"]
