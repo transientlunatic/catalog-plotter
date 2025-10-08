@@ -1,9 +1,10 @@
 import json
+
 import h5py as h5
-import numpy as np
 import scipy
 
 from .analysis import calculate_property
+
 
 class CatalogSummary:
     """

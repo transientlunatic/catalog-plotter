@@ -11,7 +11,7 @@ if len(files) > 0:
         name = file.split("-")[3]
         print(f"- name: {name}")
         print(f"  metafile: {file}")
-        print(f"  analysis: C00:Mixed")
+        print("  analysis: C00:Mixed")
 
 else:
         
@@ -20,4 +20,4 @@ else:
         name = "_".join(file.split("-")[3].split("_")[:2])
         print(f"- name: {name}")
         print(f"  metafile: {file}")
-        print(f"  analysis: C01:Mixed")
+        print("  analysis: C01:Mixed")

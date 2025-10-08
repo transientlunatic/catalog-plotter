@@ -2,10 +2,11 @@
 Code for binning and histogramming samples
 """
 
-import numpy as np
 import h5py as h5
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.stats import gaussian_kde
+
 
 def combine_analyses(files, parameters, bins):
     """
@@ -44,7 +45,7 @@ def contours(datafile, label, parameters, percentile, bins, colour='k'):
         ann = plt.annotate(label, xy=(np.median(posterior[parameters[0]]), np.median(posterior[parameters[1]])),
                            xytext=(np.median(posterior[parameters[0]])+np.random.randn(1), np.median(posterior[parameters[1]])-.5),
                            fontsize=6,
-                           arrowprops=dict(facecolor=colour, shrink=0.05),
+                           arrowprops={"facecolor": colour, "shrink": 0.05},
         )
         
         return c, ann

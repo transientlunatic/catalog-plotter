@@ -3,6 +3,7 @@ Utilities to produce latex-format representations of the catalogue.
 """
 
 import h5py as h5
+
 from .analysis import calculate_property
 
 precision = {"total_mass_source": ".1f",
@@ -64,7 +65,7 @@ def properties_latex_macros(event_data):
     for property in properties:
         # This should probably get moved to a function specific to sanitising latex outputs
         p = sanitise_macro_name(property)
-        for row, event in enumerate(event_data):
+        for _row, event in enumerate(event_data):
             print(event['name'])
             print(event["metafile"])
 
