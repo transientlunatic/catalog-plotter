@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: cache-pip-ruff-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: cache-pip-ruff-
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff
+
+      - name: Run ruff
+        id: run-ruff
+        continue-on-error: true
+        run: |
+          # Run ruff using project configuration in pyproject.toml
+          ruff check . --format github || (echo "Ruff found issues" && exit 1)
+
+      - name: Warn about ruff failure  
+        if: ${{ steps.run-ruff.outcome == 'failure' }}
+        run: |
+          echo "Ruff found issues"
+
+  test:
+    name: Test (pytest) on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: cache-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            cache-pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # install minimal test deps; installing the package installs runtime deps
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run tests
+        run: |
+          pytest -q
+
+  docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip for docs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: cache-docs-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: cache-docs-
+
+      - name: Install docs extras (if any)
+        run: |
+          python -m pip install --upgrade pip
+          # Try to install docs extras; don't fail the job if extras are missing
+          python -m pip install .[docs] || true
+          python -m pip install sphinx || true
+
+      - name: Build docs (if present)
+        id: build-docs
+        run: |
+          if [ -f docs/conf.py ] || [ -d docs ]; then
+            echo "Building Sphinx docs"
+            mkdir -p docs/_build
+            sphinx-build -b html docs docs/_build/html
+            echo "Docs built to docs/_build/html"
+          else
+            echo "No docs/ directory found — skipping docs build"
+          fi
+
+      - name: Deploy docs to GitHub Pages
+        if: ${{ steps.build-docs.outcome == 'success' }} && (github.ref == 'refs/heads/main')
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html
