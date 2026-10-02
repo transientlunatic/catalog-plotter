@@ -25,7 +25,7 @@ def sanitise_macro_name(name):
     name = name.replace('_','').replace('1', 'one').replace('2', 'two')
     return name
 
-def event_value_pair(event, value):
+def event_value_pair(event, value, property):
 
     if precision.get(property) == ".1f":
         macro = "{{{0}}}{{{1:.1f}}}"
@@ -98,19 +98,19 @@ def properties_latex_macros(event_data):
         macro = f"\\DeclareRobustCommand{{\{p}lower}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, lowers[event])
+            macro += event_value_pair(event, lowers[event], property)
         macro += "}}\n"
 
         macro += f"\\DeclareRobustCommand{{\{p}upper}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, uppers[event])
+            macro += event_value_pair(event, uppers[event], property)
         macro += "}}\n"
 
         macro += f"\\DeclareRobustCommand{{\{p}median}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, medians[event])
+            macro += event_value_pair(event, medians[event], property)
         macro += "}}\n"
 
         name = f"\{p}"
