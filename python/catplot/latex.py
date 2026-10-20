@@ -25,8 +25,8 @@ def sanitise_macro_name(name):
     name = name.replace('_','').replace('1', 'one').replace('2', 'two')
     return name
 
-def event_value_pair(event, value):
-
+def event_value_pair(event, value, property):
+    print(property, precision.get(property))
     if precision.get(property) == ".1f":
         macro = "{{{0}}}{{{1:.1f}}}"
     elif precision.get(property) == ".2f":
@@ -48,7 +48,7 @@ def properties_latex_macros(event_data):
                   'chirp_mass_source',
                   'mass_1_source',
                   'mass_2_source',
-                  r'chi_eff',
+                  'chi_eff',
                   'luminosity_distance',
                   'redshift',
                   #'final_mass_source_non_evolved', 'final_spin_non_evolved'
@@ -66,9 +66,6 @@ def properties_latex_macros(event_data):
         # This should probably get moved to a function specific to sanitising latex outputs
         p = sanitise_macro_name(property)
         for _row, event in enumerate(event_data):
-            print(event['name'])
-            print(event["metafile"])
-
             if "analysis" in event:
                 analyses = [event["analysis"]]
             else:
@@ -98,19 +95,19 @@ def properties_latex_macros(event_data):
         macro = f"\\DeclareRobustCommand{{\{p}lower}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, lowers[event])
+            macro += event_value_pair(event, lowers[event], property)
         macro += "}}\n"
 
         macro += f"\\DeclareRobustCommand{{\{p}upper}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, uppers[event])
+            macro += event_value_pair(event, uppers[event], property)
         macro += "}}\n"
 
         macro += f"\\DeclareRobustCommand{{\{p}median}}[1]{{\IfEqCase{{#1}}{{"
         for event in event_data:
             event = event['name']
-            macro += event_value_pair(event, medians[event])
+            macro += event_value_pair(event, medians[event], property)
         macro += "}}\n"
 
         name = f"\{p}"

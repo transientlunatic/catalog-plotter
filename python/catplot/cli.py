@@ -1,3 +1,4 @@
+from asyncio import events
 import os
 
 import click
@@ -5,7 +6,8 @@ import yaml
 import matplotlib.pyplot as plt
 
 from . import data, io, latex, plotting
-from .plotting import Posterior2D, ms2q
+from .plotting import Posterior2D, SmallMultiples
+from .transforms import ms2q
 
 # @click.version_option(asimov.__version__)
 @click.group()
@@ -37,10 +39,80 @@ def family(project, catfile):
     elif catfile is not None:
         cat_data = io.read_catfile(catfile)
         project = None
-        event_data = None
+        event_data = cat_data['events']
         
-    figure = plotting.comparison_plots_metafile(project=project, event_data=event_data, catfile=cat_data)
-    figure.savefig("family.png")
+    # figure = plotting.comparison_plots_metafile(project=project, event_data=event_data, catfile=cat_data)
+    f = SmallMultiples.plot(event_data);
+    f.savefig("family.png")
+
+@click.option("--project", default=None)
+@click.option("--catfile", default=None)
+@click.option("--output", "-o", default="family.png")
+@catplot.command()
+def smallmultiples(project, catfile, output):
+    """
+    Create a single-page plot of all of the events in the catalogue
+    with each analysis.
+    """
+    click.echo("Creating small multiples for the catalogue.")
+
+    if project is not None:
+        with open(os.path.join(project, ".asimov", "ledger.yml")) as datafile:
+            event_data = yaml.safe_load(datafile)
+            event_data = event_data['events']
+        click.echo(f"Found {len(event_data)} events in the asimov project.")
+
+    elif catfile is not None:
+        cat_data = io.read_catfile(catfile)
+        event_data = cat_data['events']
+
+    else:
+        click.echo("No event data provided.")
+        return
+
+    f = SmallMultiples.plot(event_data)
+    f.savefig(output)
+
+
+@click.argument("blueprint")
+@click.option("--project", required=True, help="Path to the asimov project directory")
+@click.option("--output", "-o", default="family.png")
+@catplot.command()
+def projectanalysis(blueprint, project, output):
+    """Generate a small multiples plot from a ProjectAnalysis blueprint.
+
+    BLUEPRINT is the path to a YAML file with kind: ProjectAnalysis.
+    """
+    from . import asimov as asimov_utils
+
+    with open(blueprint) as f:
+        bp = yaml.safe_load(f)
+
+    subjects = bp.get("subjects", None)
+    analyses_criteria = bp.get("analyses", None)
+    properties = bp.get(
+        "properties",
+        ["chirp_mass_source", "mass_ratio", "chi_eff", "chi_p", "luminosity_distance"],
+    )
+    priors = bp.get("priors", True)
+
+    ledger_path = os.path.join(project, ".asimov", "ledger.yml")
+    events = asimov_utils.get_approved_event_data(
+        project=project,
+        ledger_path=ledger_path,
+        subjects=subjects,
+        analyses_criteria=analyses_criteria,
+    )
+
+    click.echo(f"Found {len(events)} events with approved analyses.")
+    if not events:
+        click.echo("No events found matching the criteria.")
+        return
+
+    f = SmallMultiples.plot(events, properties=properties, priors=priors)
+    f.savefig(output, dpi=bp.get("dpi", 300))
+    click.echo(f"Saved to {output}")
+
 
 @click.option("--parameters", "-p", default=("mass_1_source", "mass_2_source"), multiple=True, help="Parameters to plot")
 @click.option("--catfile", help="Path to the catalogue file")
@@ -95,7 +167,7 @@ def population(catfile, parameters):
 def macros(catfile, output):
     click.echo("Creating LaTeX macros for the catalogue.")
     cat_data = io.read_catfile(catfile)
-    macros, table = latex.properties_latex_macros(cat_data)
+    macros, table = latex.properties_latex_macros(cat_data['events'])
 
     if output is None:
         output = os.getcwd()

@@ -1,5 +1,6 @@
 import matplotlib.colors
 from cycler import cycler
+from itertools import cycle
 
 colours = """#3D49E3
 #74E33D
@@ -22,4 +23,5 @@ colours = """#3D49E3
 colours = [matplotlib.colors.to_rgba(color) for color in colours]
     
 color_cycle = cycler('color', list(colours))
+color_iter = cycle(colours)
 
