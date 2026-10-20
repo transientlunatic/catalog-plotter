@@ -45,33 +45,73 @@ def family(project, catfile):
     f = SmallMultiples.plot(event_data);
     f.savefig("family.png")
 
-@click.option("--project", default=None)
-@click.option("--catfile", default=None)
-@click.option("--output", "-o", default="family.png")
-@catplot.command()
-def smallmultiples(project, catfile, output):
-    """
-    Create a single-page plot of all of the events in the catalogue
-    with each analysis.
-    """
-    click.echo("Creating small multiples for the catalogue.")
+def _load_events(project, catfile, approximant, pipeline):
+    """Events with approved analyses from an asimov ledger, or from a catfile."""
+    from . import asimov as asimov_utils
 
     if project is not None:
-        with open(os.path.join(project, ".asimov", "ledger.yml")) as datafile:
-            event_data = yaml.safe_load(datafile)
-            event_data = event_data['events']
-        click.echo(f"Found {len(event_data)} events in the asimov project.")
+        criteria = [[{"pipeline": pipeline}, {"waveform.approximant": approximant}]]
+        events = asimov_utils.get_approved_event_data(
+            project=project,
+            ledger_path=os.path.join(project, ".asimov", "ledger.yml"),
+            analyses_criteria=criteria,
+        )
+        click.echo(f"Found {len(events)} events with approved {approximant} analyses.")
+        return events
+    if catfile is not None:
+        return io.read_catfile(catfile)["events"]
+    raise click.UsageError("Provide either --project or --catfile.")
 
-    elif catfile is not None:
-        cat_data = io.read_catfile(catfile)
-        event_data = cat_data['events']
 
-    else:
-        click.echo("No event data provided.")
-        return
+@catplot.command()
+@click.option("--project", default=None, help="Asimov project; uses the approved analysis for each event.")
+@click.option("--catfile", default=None, help="Catalogue file (alternative to --project).")
+@click.option("--approximant", default="IMRPhenomXPHM", show_default=True)
+@click.option("--pipeline", default="bilby", show_default=True)
+@click.option("--output", "-o", default="smallmultiples.pdf", show_default=True,
+              help="Output file. With several pages, -1, -2... is added to the name.")
+@click.option("--sort-by", type=click.Choice(["snr", "name"]), default="snr", show_default=True)
+@click.option("--rows-per-page", type=int, default=0, help="Split over pages of at most this many rows.")
+@click.option("--jsd/--no-jsd", default=False, help="Add a Jensen-Shannon divergence bar to each cell.")
+@click.option("--colour", default="#2b5c8a", show_default=True, help="Fill colour, or 'cycle' for one per row.")
+@click.option("--width", type=float, default=7.0, show_default=True, help="Figure width in inches.")
+def smallmultiples(project, catfile, approximant, pipeline, output, sort_by,
+                   rows_per_page, jsd, colour, width):
+    """
+    Small multiples of the marginal posteriors, one row per event.
+    """
+    from . import multiples
 
-    f = SmallMultiples.plot(event_data)
-    f.savefig(output)
+    events = _load_events(project, catfile, approximant, pipeline)
+    summaries = multiples.sort_summaries(multiples.summarise_events(events), sort_by)
+    pages = multiples.split_pages(summaries, rows_per_page)
+    root, ext = os.path.splitext(output)
+    for number, page in enumerate(pages, start=1):
+        fig = multiples.plot_small_multiples(page, jsd=jsd, colour=colour, width=width)
+        path = output if len(pages) == 1 else f"{root}-{number}{ext}"
+        fig.savefig(path, dpi=300)
+        plt.close(fig)
+        click.echo(f"Saved {len(page)} events to {path}")
+
+
+@catplot.command()
+@click.option("--project", default=None)
+@click.option("--catfile", default=None)
+@click.option("--approximant", default="IMRPhenomXPHM", show_default=True)
+@click.option("--pipeline", default="bilby", show_default=True)
+@click.option("--output", "-o", default="divergence.pdf", show_default=True)
+@click.option("--width", type=float, default=7.0, show_default=True)
+def divergence(project, catfile, approximant, pipeline, output, width):
+    """
+    Jensen-Shannon divergence of each posterior from its prior, against network SNR.
+    """
+    from . import multiples
+
+    events = _load_events(project, catfile, approximant, pipeline)
+    summaries = multiples.summarise_events(events)
+    fig = multiples.plot_divergence_snr(summaries, width=width)
+    fig.savefig(output, dpi=300)
+    click.echo(f"Saved to {output}")
 
 
 @click.argument("blueprint")
