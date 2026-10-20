@@ -92,6 +92,7 @@ _PAPER_STYLE = {
 }
 
 _MAX_SAMPLES = 20000
+JSD_COLOUR = "#c8561e"
 
 
 def _transform(samples, spec):
@@ -393,7 +394,7 @@ def plot_small_multiples(
                         frac = min(summary.jsd[prop] / jsd_max, 1.0)
                         ax.axhspan(-0.17, -0.09, xmin=0, xmax=1, color="0.93",
                                    linewidth=0)
-                        ax.axhspan(-0.17, -0.09, xmin=0, xmax=frac, color="0.55",
+                        ax.axhspan(-0.17, -0.09, xmin=0, xmax=frac, color=JSD_COLOUR,
                                    linewidth=0)
 
                 if row == 0:
@@ -403,7 +404,24 @@ def plot_small_multiples(
                                    labelsize=fontsize, pad=1.5)
                     ax.set_xticklabels([_tick_label(prop, t) for t in spec["ticks"]])
 
+        if jsd:
+            _jsd_key(fig, header / height, fontsize, jsd_max)
     return fig
+
+
+def _jsd_key(fig, header_frac, fontsize, jsd_max):
+    """A small scale in the top-left corner explaining the divergence bars."""
+    key = fig.add_axes([0.012, 1 - header_frac * 0.62, 0.105, header_frac * 0.3])
+    key.set_xlim(0, 1)
+    key.set_ylim(0, 1)
+    key.axis("off")
+    key.axhspan(0.15, 0.55, xmin=0, xmax=1, color="0.93", linewidth=0, clip_on=False)
+    key.axhspan(0.15, 0.55, xmin=0, xmax=0.5, color=JSD_COLOUR, linewidth=0,
+                clip_on=False)
+    key.text(0, -0.25, "0", fontsize=fontsize - 0.5, ha="left", va="top")
+    key.text(1, -0.25, f"{jsd_max:g} bit", fontsize=fontsize - 0.5, ha="right", va="top")
+    key.text(0, 1.0, r"$D_\mathrm{JS}$(posterior, prior)", fontsize=fontsize - 0.5,
+             ha="left", va="bottom", color=JSD_COLOUR)
 
 
 def plot_divergence_snr(

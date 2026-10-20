@@ -45,7 +45,7 @@ def family(project, catfile):
     f = SmallMultiples.plot(event_data);
     f.savefig("family.png")
 
-def _load_events(project, catfile, approximant, pipeline):
+def _load_events(project, catfile, approximant, pipeline, exclude=()):
     """Events with approved analyses from an asimov ledger, or from a catfile."""
     from . import asimov as asimov_utils
 
@@ -57,10 +57,14 @@ def _load_events(project, catfile, approximant, pipeline):
             analyses_criteria=criteria,
         )
         click.echo(f"Found {len(events)} events with approved {approximant} analyses.")
-        return events
-    if catfile is not None:
-        return io.read_catfile(catfile)["events"]
-    raise click.UsageError("Provide either --project or --catfile.")
+    elif catfile is not None:
+        events = io.read_catfile(catfile)["events"]
+    else:
+        raise click.UsageError("Provide either --project or --catfile.")
+    if exclude:
+        events = [event for event in events if event["name"] not in exclude]
+        click.echo(f"Excluded {', '.join(exclude)}.")
+    return events
 
 
 @catplot.command()
@@ -68,6 +72,7 @@ def _load_events(project, catfile, approximant, pipeline):
 @click.option("--catfile", default=None, help="Catalogue file (alternative to --project).")
 @click.option("--approximant", default="IMRPhenomXPHM", show_default=True)
 @click.option("--pipeline", default="bilby", show_default=True)
+@click.option("--exclude", multiple=True, help="Event name to leave out (repeatable).")
 @click.option("--output", "-o", default="smallmultiples.pdf", show_default=True,
               help="Output file. With several pages, -1, -2... is added to the name.")
 @click.option("--sort-by", type=click.Choice(["snr", "name"]), default="snr", show_default=True)
@@ -75,14 +80,14 @@ def _load_events(project, catfile, approximant, pipeline):
 @click.option("--jsd/--no-jsd", default=False, help="Add a Jensen-Shannon divergence bar to each cell.")
 @click.option("--colour", default="#2b5c8a", show_default=True, help="Fill colour, or 'cycle' for one per row.")
 @click.option("--width", type=float, default=7.0, show_default=True, help="Figure width in inches.")
-def smallmultiples(project, catfile, approximant, pipeline, output, sort_by,
+def smallmultiples(project, catfile, approximant, pipeline, exclude, output, sort_by,
                    rows_per_page, jsd, colour, width):
     """
     Small multiples of the marginal posteriors, one row per event.
     """
     from . import multiples
 
-    events = _load_events(project, catfile, approximant, pipeline)
+    events = _load_events(project, catfile, approximant, pipeline, exclude)
     summaries = multiples.sort_summaries(multiples.summarise_events(events), sort_by)
     pages = multiples.split_pages(summaries, rows_per_page)
     root, ext = os.path.splitext(output)
@@ -99,15 +104,16 @@ def smallmultiples(project, catfile, approximant, pipeline, output, sort_by,
 @click.option("--catfile", default=None)
 @click.option("--approximant", default="IMRPhenomXPHM", show_default=True)
 @click.option("--pipeline", default="bilby", show_default=True)
+@click.option("--exclude", multiple=True, help="Event name to leave out (repeatable).")
 @click.option("--output", "-o", default="divergence.pdf", show_default=True)
 @click.option("--width", type=float, default=7.0, show_default=True)
-def divergence(project, catfile, approximant, pipeline, output, width):
+def divergence(project, catfile, approximant, pipeline, exclude, output, width):
     """
     Jensen-Shannon divergence of each posterior from its prior, against network SNR.
     """
     from . import multiples
 
-    events = _load_events(project, catfile, approximant, pipeline)
+    events = _load_events(project, catfile, approximant, pipeline, exclude)
     summaries = multiples.summarise_events(events)
     fig = multiples.plot_divergence_snr(summaries, width=width)
     fig.savefig(output, dpi=300)
