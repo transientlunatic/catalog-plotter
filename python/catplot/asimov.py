@@ -44,11 +44,13 @@ def _production_matches(prod_data, conditions):
 
 
 def _is_approved(prod_data):
-    """Return True if the production has at least one APPROVED review entry."""
-    for review in prod_data.get("review", []):
-        if review.get("status") == "APPROVED":
-            return True
-    return False
+    """Return True if the most recent review of the production is APPROVED.
+
+    Reviews are appended to, so a later REJECTED entry supersedes an earlier
+    APPROVED one.
+    """
+    reviews = prod_data.get("review") or []
+    return bool(reviews) and reviews[-1].get("status") == "APPROVED"
 
 
 def get_approved_event_data(project, ledger_path, subjects=None, analyses_criteria=None):
