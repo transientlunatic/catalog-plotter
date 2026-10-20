@@ -2,12 +2,15 @@ import os
 from collections.abc import Sequence
 from typing import Optional, Tuple
 
+from aiohttp import ClientPayloadError
 
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 from matplotlib.mlab import GaussianKDE
+from matplotlib.ticker import MultipleLocator, AutoMinorLocator, LogLocator
+
 
 #from analysis import calculate_divergences
 from pyfonts import load_google_font, set_default_font
@@ -16,19 +19,75 @@ from scipy.stats import gaussian_kde
 from .asimov import get_results_file
 
 from .io import read_metafile
+from .colour import color_cycle, color_iter
+
+plt.rc('axes', prop_cycle=color_cycle)
 
 font = load_google_font("Source Code Pro")
 set_default_font(font)
 
 display_parameters = {
+    "theta_jn": {
+        "name": "theta_JN",
+        "symbol": r"$\theta_{JN}$",
+        "xrange": (0, np.pi),
+    },
+    "chirp_mass": { 
+        "name": "Chirp mass",
+        "symbol": r"$\mathcal{M}$",
+        "xrange": (0.8, 100),
+    },
+    "mass_1": { 
+        "name": "Mass 1",
+        "symbol": r"$m_1$ / M_\odot",
+        "xrange": (0.8, 100),
+    },
+    "mass_2": { 
+        "name": "Mass 2",
+        "symbol": r"$m_2$ / M_\odot",
+        "xrange": (0.8, 100),
+    },
+    "mass_1_source": { 
+        "name": "Mass 1 (source frame)",
+        "symbol": r"$m_{1, src} / M_\odot$",
+        "xrange": (0.8, 100),
+    },
+    "mass_2_source": { 
+        "name": "Mass 2 (source frame)",
+        "symbol": r"$m_{2, src} / M_\odot$",
+        "xrange": (0.8, 100),
+    },
     "total_mass_source": { 
         "name": "Total mass (source frame)",
-        "symbol": r"$M_{tot, src}$"
+        "symbol": r"$M_{tot, src} / M_\odot$",
+        "xrange": (0.8, 200),
     },
     "mass_ratio": {
         "name": "Mass ratio",
-        "symbol": r"$q$"
-    }
+        "symbol": r"$q$",
+        "xrange": (0.1, 1),
+    },
+    "chirp_mass_source": { 
+        "name": "Chirp mass (source frame)",
+        "symbol": r"$\mathcal{M}_{src} / M_\odot$",
+        "xrange": (0.8, 100),
+    },
+    "chi_eff": { 
+        "name": "Effective spin",
+        "symbol": r"$\chi_{eff}$",
+        "xrange": (-1, 1),
+    },
+    "chi_p": { 
+        "name": "Precessing spin",
+        "symbol": r"$\chi_{p}$",
+        "xrange": (0, 1),
+    },
+    "luminosity_distance": { 
+        "name": "Luminosity distance",
+        "symbol": r"$d_L$ / Mpc",
+        "xrange": (10, 20000),
+        "scale": "log",
+    },
 }
 
 class Bounded_2d_kde(gaussian_kde):
@@ -105,6 +164,52 @@ class Bounded_2d_kde(gaussian_kde):
 
 
 class Posterior2D:
+
+    @staticmethod
+    def _plot_mass_component_lines(ax, parameters, xrange, yrange, m_value=3.0, color='k', linestyle='--', zorder=20):
+        """
+        If parameters correspond to (total_mass*, mass_ratio) (in any order),
+        plot dashed lines corresponding to m1 = m_value and m2 = m_value.
+
+        The relations used are:
+          M_tot = m1 + m2
+          q = m2 / m1
+
+        For m1 = m0 -> M = m0 G* (1 + q)
+        For m2 = m0 -> M = m0 * (1 + 1/q)
+        """
+        total_mass_keys = {'total_mass', 'total_mass_source'}
+        if 'mass_ratio' not in parameters or not any(tk in parameters for tk in total_mass_keys):
+            return
+
+        q_index = parameters.index('mass_ratio')
+        q_is_x = (q_index == 0)
+
+        q_range = xrange if q_is_x else yrange
+        # M_range = yrange if q_is_x else xrange  # kept for clarity if needed later
+
+        eps = 1e-6
+        q_lo = max(q_range[0], eps)
+        q_hi = q_range[1]
+        if q_hi <= q_lo:
+            return
+
+        q_vals = np.linspace(q_lo, q_hi, 300)
+        # m1 = m_value -> M = m_value * (1 + q)
+        M_m1 = m_value * (1.0 + q_vals)
+        # m2 = m_value -> M = m_value * (1 + 1/q)  (only for q > 0)
+        q_nonzero = q_vals[q_vals > eps]
+        if q_nonzero.size == 0:
+            return
+        M_m2 = m_value * (1.0 + 1.0 / q_nonzero)
+
+        if q_is_x:
+            ax.plot(q_vals, M_m1, linestyle=linestyle, color=color, linewidth=1, zorder=zorder)
+            ax.plot(q_nonzero, M_m2, linestyle=linestyle, color=color, linewidth=1, zorder=zorder)
+        else:
+            ax.plot(M_m1, q_vals, linestyle=linestyle, color=color, linewidth=1, zorder=zorder)
+            ax.plot(M_m2, q_nonzero, linestyle=linestyle, color=color, linewidth=1, zorder=zorder)
+
 
     @classmethod
     def plot(cls,
@@ -202,12 +307,137 @@ class Posterior2D:
                 ax.fill_between(equal, equal, yrange[1], color='gray', alpha=0.3, 
                                zorder=10,)
                 
-            ax.set_xlim(xrange)
-            ax.set_ylim(yrange)
+        cls._plot_mass_component_lines(ax, parameters, xrange, yrange, m_value=3.0, color='k', linestyle='--')
                 
-                
+        ax.set_xlim(xrange)
+        ax.set_ylim(yrange)
+
         return ax
 
+class SmallMultiples: 
+
+    @staticmethod
+    def clear_axis(ax): 
+        """ Clear the axis of ticks and spines. """
+        ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
+        for spine in ax.spines.values(): 
+            spine.set_visible(False)
+        ax.tick_params(which='major', length=0, width=0, labelbottom=False)
+        ax.tick_params(which='minor', length=0, width=0, labelsize=8)
+        ax.grid(False)
+
+            
+
+    @classmethod
+    def _add_name_to_row(cls, fig, gs, row, event):
+        ax = fig.add_subplot(gs[row, 0])
+        ax.text(0, 0.5, 
+                s=f"{event['name']}", 
+                #fontname="serif", 
+                verticalalignment="center", 
+                size=7)
+        cls.clear_axis(ax)
+        return ax
+
+    @staticmethod
+    def _plot_1d_kde_estimate(ax, axis, data, colour="k", style="filled"):
+        kde = GaussianKDE(data)(axis)
+        kde = kde / np.max(np.abs(kde))
+        if style == "filled":
+            ax.fill_between(axis, kde, color=colour, alpha=0.3)
+        elif style == "line":
+            ax.plot(axis, kde, color=colour, linewidth=1, linestyle='--')
+        return ax
+
+    @classmethod
+    def plot(cls, 
+             events,
+             properties = ['chirp_mass_source', 'mass_ratio', 'chi_eff', 'chi_p', 'luminosity_distance'],
+             priors = True,
+             **kwargs,
+             ): 
+        """ 
+        Plot small multiples for a list of events and properties. 
+
+        Parameters
+        ----------
+        events : list
+            List of event data from catfile or elsewhere.
+        properties : list
+            List of properties to plot for each event.  
+        priors : bool
+            Whether to include prior distributions in the plots.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The resulting figure object.
+        """
+        
+        rows = len(events)
+        columns = len(properties) + 1
+
+        fig = plt.figure(layout=None, figsize=(9, 0.33*rows), dpi=300)
+        gs = fig.add_gridspec(nrows=rows, ncols=columns)
+
+        for row, event in enumerate(events): 
+            event_color = next(color_iter)
+            # Add the event name to the first column
+            name_ax = cls._add_name_to_row(fig, gs, row, event)
+
+            metafile = event.get('metafile', None)
+
+
+            try:
+                with read_metafile(event['metafile'], **kwargs) as meta: 
+                    for col, prop in enumerate(properties): 
+                        ax = fig.add_subplot(gs[row, col+1])
+                        
+                        if display_parameters[prop].get('scale', 'linear') == 'log':
+                            ax.set_xscale('log')
+                            axis = np.logspace(np.log10(display_parameters[prop]['xrange'][0]), np.log10(display_parameters[prop]['xrange'][1]), 400)
+                        else:
+                            axis = np.linspace(*np.array(display_parameters[prop]['xrange']), 400)
+                        try:
+                            ax = cls._plot_1d_kde_estimate(ax, axis, meta['posterior_samples'][prop], colour=event.get('color', event_color))
+                        except np.linalg.LinAlgError:
+                            pass
+
+                        if priors:
+                            try:
+                                ax = cls._plot_1d_kde_estimate(ax, axis, meta['priors']['samples'][prop], colour='k', style="line")
+                            except np.linalg.LinAlgError:
+                                pass
+                            except ValueError:
+                                pass
+                            except KeyError:
+                                pass    
+
+                        cls.clear_axis(ax)
+            except(FileNotFoundError, ClientPayloadError) as e:
+                print(e)
+                pass
+
+
+        top_row = fig.axes[1:columns]
+        for col, prop in enumerate(properties):
+            top_row[col].set_title(f"{display_parameters[prop]['symbol']}", fontsize=10)
+
+        bottom_row = fig.axes[(-columns+1):]
+        for col, prop in enumerate(properties):
+            bottom_row[col].tick_params(bottom=True, labelbottom=True)
+            if display_parameters[prop].get('scale', 'linear') == 'log':
+                bottom_row[col].xaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
+                bottom_row[col].xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10)*0.1, numticks=10))
+                bottom_row[col].tick_params(which='major', length=6, width=1, labelbottom=True)
+                bottom_row[col].tick_params(which='minor', length=3, width=1, labelsize=8)
+            else:
+                bottom_row[col].xaxis.set_minor_locator(AutoMinorLocator())
+                bottom_row[col].tick_params(which='major', length=6, width=1, labelbottom=True)
+                bottom_row[col].tick_params(which='minor', length=3, width=1, labelsize=8)
+                bottom_row[col].tick_params(which='minor', labelbottom=False)
+        return fig
+    
 
 
 def comparison_plots_metafile(project, event_data, reviewed=False):

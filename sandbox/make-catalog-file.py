@@ -4,6 +4,7 @@ import sys
 location = sys.argv[1]
 
 files = glob.glob(f"{location}/*.hdf5")
+files = sorted(files, key=lambda x: x.split('/')[-1])
 
 if len(files) > 0:
 
@@ -16,6 +17,7 @@ if len(files) > 0:
 else:
         
     files = glob.glob(f"{location}/*_cosmo.h5")
+    files = sorted(files, key=lambda x: x.split('/')[-1])
     for file in files:
         name = "_".join(file.split("-")[3].split("_")[:2])
         print(f"- name: {name}")

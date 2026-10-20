@@ -25,16 +25,19 @@ class CatalogSummary:
             data = {"name": event['name']}
             data['properties'] = {}
             with h5.File(event['metafile'], 'r') as datafile:
-                post = datafile[event['analysis']]['posterior_samples']
-                for prop in post.dtype.fields.keys():
-                    try:
-                        lower, median, upper = calculate_property(post[prop])
-                        data['properties'][prop] = {"median": median,
-                                                    "lower": lower,
-                                                    "upper": upper}
-                    except scipy.linalg.LinAlgError:
-                        print(event['name'], prop)
-            
+                try:
+
+                    post = datafile[event['analysis']]['posterior_samples']
+                    for prop in post.dtype.fields.keys():
+                        try:
+                            lower, median, upper = calculate_property(post[prop])
+                            data['properties'][prop] = {"median": median,
+                                                        "lower": lower,
+                                                        "upper": upper}
+                        except scipy.linalg.LinAlgError:
+                            print(event['name'], prop)
+                except KeyError:
+                    print(f"Missing posterior samples for {event['name']}") 
             self.data.append(data)
 
     def save_json(self, output):
